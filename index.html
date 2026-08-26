@@ -3,110 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Cosmic Galaxy Video</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>One Star. A Thousand Memories.</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js & GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
         body {
-            background-color: #010108;
+            margin: 0;
             overflow: hidden;
-            height: 100vh;
+            background-color: #020309;
+            font-family: 'Poppins', sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100vw;
-            perspective: 1400px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
-
-        /* Latar Belakang Nebula & Bintang */
-        .nebula {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 25% 35%, rgba(0, 255, 130, 0.18) 0%, transparent 45%),
-                radial-gradient(circle at 75% 65%, rgba(170, 0, 255, 0.2) 0%, transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(0, 130, 255, 0.15) 0%, transparent 65%);
-            z-index: 1;
+            height: 100vh;
+            z-index: 10;
             pointer-events: none;
         }
-
-        .stars-field {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-image: radial-gradient(white 1.2px, transparent 0);
-            background-size: 50px 50px;
-            opacity: 0.35;
-            z-index: 1;
-            pointer-events: none;
+        .interactive {
+            pointer-events: auto;
         }
-
-        /* TAMPILAN AWAL: BINTANG UTAMA */
-        .core-star-container {
+        /* Custom Glow & Cinematic Bloom */
+        .cosmic-glow {
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 0 40px rgba(180, 0, 255, 0.4);
+        }
+        /* Video Memory DOM Overlay styling for interactive HTML5 video elements */
+        .memory-node {
             position: absolute;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.5s ease, transform 0.3s ease;
             cursor: pointer;
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body class="bg-[#020309] text-white">
+
+    <!-- WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer flex flex-col justify-between p-6 md:p-10">
+        
+        <!-- Top Bar: Music Toggle & Branding Minimal -->
+        <div class="flex justify-between items-center w-full">
+            <div id="brand-title" class="text-xs md:text-sm tracking-[0.4em] uppercase text-cyan-200/50 opacity-0 transition-opacity duration-1000">
+                Cosmic Memories
+            </div>
+            <button id="music-btn" onclick="toggleMusic()" class="interactive opacity-0 transition-opacity duration-1000 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-lg hover:bg-white/20 active:scale-95 shadow-lg">
+                ♪
+            </button>
+        </div>
+
+        <!-- Center Initial Screen Prompt -->
+        <div id="initial-prompt" class="absolute inset-0 flex flex-col items-center justify-center text-center cursor-pointer interactive group">
+            <div class="relative flex items-center justify-center">
+                <div class="absolute w-24 h-24 bg-cyan-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div class="w-8 h-8 bg-white rounded-full shadow-[0_0_30px_#00ffff,0_0_60px_#0077ff] group-hover:scale-125 transition-transform duration-500"></div>
+            </div>
+            <p class="mt-8 text-xs md:text-sm tracking-[0.3em] uppercase text-cyan-100/70 animate-bounce cosmic-glow">
+                Klik Bintang Untuk Membuka Universe ✨
+            </p>
+        </div>
+
+        <!-- Birthday Message Reveal (Muncul setelah Galaxy aktif) -->
+        <div id="birthday-message" class="absolute bottom-12 left-1/2 -translate-x-1/2 text-center opacity-0 transition-opacity duration-1000 pointer-events-none">
+            <h1 class="text-2xl md:text-4xl font-semibold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-purple-300 cosmic-glow">
+                HAPPY BIRTHDAY AMEL
+            </h1>
+            <p class="text-xs md:text-sm tracking-widest text-cyan-200/70 mt-2 italic">
+                "A little universe made of memories."
+            </p>
+        </div>
+
+        <!-- Bottom Hint -->
+        <div class="flex justify-between items-end w-full">
+            <div id="explore-hint" class="text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/30 opacity-0 transition-opacity duration-1000">
+                Geser kursor untuk menjelajah ruang 3D
+            </div>
+            <div class="text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/20">
+                Interactive Art
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Video Modal Detail (Saat Video Diklik) -->
+    <div id="video-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+        <div class="relative w-[90%] max-w-2xl aspect-video rounded-2xl overflow-hidden border border-cyan-500/30 shadow-[0_0_50px_rgba(0,255,255,0.2)] bg-black">
+            <video id="modal-video" class="w-full h-full object-cover" controls playsinline></video>
+            <button onclick="closeVideoModal()" class="absolute top-4 right-4 bg-black/60 hover:bg-black/90 text-white px-4 py-2 rounded-full text-xs tracking-widest uppercase border border-white/20 transition-all">
+                Tutup ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- HTML5 Audio Background -->
+    <audio id="bgm" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-romantic.mp3" type="audio/mp3">
+    </audio>
+
+    <script>
+        // --- CONFIG & STATE ---
+        let scene, camera, renderer;
+        let starMesh, starParticles, starField;
+        let galaxyGroup;
+        let isStarted = false;
+        let mouseX = 0, mouseY = 0;
+        let targetX = 0, targetY = 0;
+        
+        // Daftar Video Kenangan (Ganti URL dengan asset video MP4 Anda)
+        const videoSources = [
+            "https://assets.mixkit.co/videos/preview/mixkit-hands-holding-a-smartphone-with-a-heart-animation-43110-large.mp4",
+            "https://assets.mixkit.co/videos/preview/mixkit-woman-holding-a-smartphone-with-a-green-screen-43108-large.mp4",
+            "https://assets.mixkit.co/videos/preview/mixkit-romantic-couple-holding-hands-at-sunset-42867-large.mp4",
+            "https://assets.mixkit.co/videos/preview/mixkit-silhouette-of-a-couple-at-sunset-41662-large.mp4",
+            "https://assets.mixkit.co/videos/preview/mixkit-red-rose-petals-falling-in-slow-motion-42938-large.mp4",
+            "https://assets.mixkit.co/videos/preview/mixkit-sparklers-in-the-hands-of-a-person-41712-large.mp4"
+        ];
+
+        const memoryNodes = [];
+
+        // --- INIT THREE.JS ENVIRONMENT ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020309, 0.0015);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 0, 400);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            container.appendChild(renderer.domElement);
+
+            createStarField();
+            createCentralStar();
+            createNebulaBackground();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            document.getElementById('initial-prompt').addEventListener('click', startExperience);
+
+            animate();
         }
 
-        .core-star {
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, #ffffff 0%, #76f2ff 35%, #0066ff 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 50px #00ffff, 0 0 100px #0066ff, inset 0 0 25px white;
-            animation: pulseCore 2s infinite alternate;
+        // --- STAR FIELD (Ribuan Bintang Parallax) ---
+        function createStarField() {
+            const count = 1200;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 2000;
+                positions[i+1] = (Math.random() - 0.5) * 2000;
+                positions[i+2] = (Math.random() - 0.5) * 2000;
+
+                colors[i] = 0.8 + Math.random() * 0.2;
+                colors[i+1] = 0.9 + Math.random() * 0.1;
+                colors[i+2] = 1.0;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            starField = new THREE.Points(geometry, material);
+            scene.add(starField);
         }
 
-        .core-label {
-            margin-top: 22px;
-            font-size: 0.95rem;
-            letter-spacing: 5px;
-            color: #bdf7ff;
-            text-transform: uppercase;
-            text-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
-            animation: glowText 2s infinite alternate;
+        // --- NEBULA BACKGROUND (Procedural Soft Glowing Blobs) ---
+        function createNebulaBackground() {
+            const nebulaGroup = new THREE.Group();
+            const colors = [0x00ffaa, 0x9900ff, 0x0088ff, 0xff00aa];
+
+            for (let i = 0; i < 6; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+                
+                const col = new THREE.Color(colors[i % colors.length]);
+                gradient.addColorStop(0, `rgba(${col.r*255}, ${col.g*255}, ${col.b*255}, 0.25)`);
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 128, 128);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                const plane = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material);
+                plane.position.set(
+                    (Math.random() - 0.5) * 1000,
+                    (Math.random() - 0.5) * 1000,
+                    -600 + Math.random() * 200
+                );
+                nebulaGroup.add(plane);
+            }
+            scene.add(nebulaGroup);
         }
 
-        @keyframes pulseCore {
-            0% { transform: scale(1); box-shadow: 0 0 35px #00ffff, 0 0 70px #0066ff; }
-            100% { transform: scale(1.15); box-shadow: 0 0 60px #ffffff, 0 0 120px #00ffff; }
+        // --- CENTRAL STAR ---
+        function createCentralStar() {
+            const geometry = new THREE.SphereGeometry(15, 32, 32);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                wireframe: false
+            });
+            starMesh = new THREE.Mesh(geometry, material);
+            scene.add(starMesh);
+
+            // Orbiting particles around central star
+            const pCount = 100;
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = new Float32Array(pCount * 3);
+            for(let i=0; i<pCount*3; i+=3) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 25 + Math.random() * 20;
+                pPos[i] = Math.cos(angle) * r;
+                pPos[i+1] = (Math.random() - 0.5) * 10;
+                pPos[i+2] = Math.sin(angle) * r;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({ size: 1.5, color: 0x00ffff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
+            starParticles = new THREE.Points(pGeo, pMat);
+            scene.add(starParticles);
         }
 
-        @keyframes glowText {
-            0% { opacity: 0.6; }
-            100% { opacity: 1; }
+        // --- INTERACTION: START EXPERIENCE & EXPLOSION ---
+        function startExperience() {
+            if (isStarted) return;
+            isStarted = true;
+
+            // Hide initial prompt & show UI
+            document.getElementById('initial-prompt').style.opacity = '0';
+            setTimeout(() => document.getElementById('initial-prompt').remove(), 500);
+
+            document.getElementById('brand-title').style.opacity = '1';
+            document.getElementById('music-btn').style.opacity = '1';
+            document.getElementById('explore-hint').style.opacity = '1';
+
+            // Play Music
+            const bgm = document.getElementById('bgm');
+            bgm.play().catch(e => console.log("Audio autoplay restricted."));
+
+            // Cinematic Explosion & Camera Sequence with GSAP
+            const tl = gsap.timeline();
+
+            // 1. Energy Charge & Star Scale Up
+            tl.to(starMesh.scale, { x: 2.5, y: 2.5, z: 2.5, duration: 0.8, ease: "power2.in" });
+            tl.to(starParticles.scale, { x: 3, y: 3, z: 3, duration: 0.8, ease: "power2.in" }, "-=0.8");
+
+            // 2. Explosion flash & Camera Push In
+            tl.to(camera.position, { z: 100, duration: 0.6, ease: "power3.out" });
+            
+            // Fade out central star & spawn Galaxy
+            tl.to(starMesh.material, { opacity: 0, transparent: true, duration: 0.3 }, "-=0.3");
+            tl.to(starParticles.material, { opacity: 0, duration: 0.3 }, "-=0.3");
+
+            tl.call(() => {
+                scene.remove(starMesh);
+                scene.remove(starParticles);
+                buildMemoryGalaxy();
+                document.getElementById('birthday-message').style.opacity = '1';
+            });
         }
 
-        .core-star-container.exploding {
-            transform: scale(15);
-            opacity: 0;
-            pointer-events: none;
+        // --- 3D MEMORY GALAXY & VIDEO OBJECTS ---
+        function buildMemoryGalaxy() {
+            galaxyGroup = new THREE.Group();
+            scene.add(galaxyGroup);
+
+            const totalMemories = 24;
+            const radiusX = 450;
+            const radiusZ = 350;
+
+            for (let i = 0; i < totalMemories; i++) {
+                const angle = (i / totalMemories) * Math.PI * 2;
+                const x = Math.cos(angle) * (radiusX + (Math.random() * 100 - 50));
+                const z = Math.sin(angle) * (radiusZ + (Math.random() - 0.5) * 200);
+                const y = (Math.random() - 0.5) * 200;
+
+                // Create HTML Video Element inside a 3D-positioned wrapper
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'memory-node interactive';
+                
+                const videoSrc = videoSources[i % videoSources.length];
+                const isHero = i === 0 || i === 6; // Hero videos larger
+                const sizeClass = isHero ? 'w-44 md:w-56 aspect-video' : 'w-28 md:w-36 aspect-video';
+
+                nodeDiv.innerHTML = `
+                    <div class="${sizeClass} rounded-xl overflow-hidden border border-white/40 shadow-[0_10px_30px_rgba(0,0,0,0.8)] bg-black/50 backdrop-blur-md transform transition-all duration-300 hover:scale-110 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(0,255,255,0.6)]">
+                        <video src="${videoSrc}" class="w-full h-full object-cover pointer-events-none" autoplay loop muted playsinline></video>
+                    </div>
+                `;
+
+                // Click to open modal
+                nodeDiv.addEventListener('click', () => {
+                    openVideoModal(videoSrc);
+                });
+
+                document.body.appendChild(nodeDiv);
+
+                // Store reference for 3D projection update
+                memoryNodes.push({
+                    element: nodeDiv,
+                    position: new THREE.Vector3(x, y, z),
+                    baseAngle: angle,
+                    speed: 0.001 + Math.random() * 0.0015,
+                    radius: radiusX
+                });
+            }
         }
 
-        /* RUANG GALAKSI 3D DENGAN SUDUT KEMIRINGAN (TILT) */
-        .galaxy-space {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            transform-style: preserve-3d;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1.2s ease;
+        // --- VIDEO MODAL CONTROL ---
+        function openVideoModal(src) {
+            const modal = document.getElementById('video-modal');
+            const video = document.getElementById('modal-video');
+            video.src = src;
+            video.currentTime = 0;
+            video.play();
+            modal.style.opacity = '1';
+            modal.style.pointerEvents = 'auto';
+        }
+
+        function closeVideoModal() {
+            const modal = document.getElementById('video-modal');
+            const video = document.getElementById('modal-video');
+            video.pause();
+            modal.style.opacity = '0';
+            modal.style.pointerEvents = 'none';
+        }
+
+        // --- MOUSE PARALLAX & MOVEMENT ---
+        function onMouseMove(event) {
+            mouseX = (event.clientX - window.innerWidth / 2) * 0.15;
+            mouseY = (event.clientY - window.innerHeight / 2) * 0.15;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let musicPlaying = false;
+        function toggleMusic() {
+            const bgm = document.getElementById('bgm');
+            const btn = document.getElementById('music-btn');
+            musicPlaying = !musicPlaying;
+            if (musicPlaying) {
+                bgm.play();
+                btn.classList.add('bg-cyan-500/30', 'border-cyan-400');
+            } else {
+                bgm.pause();
+                btn.classList.remove('bg-cyan-500/30', 'border-cyan-400');
+            }
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth Camera Damping (Parallax)
+            targetX += (mouseX - targetX) * 0.05;
+            targetY += (mouseY - targetY) * 0.05;
+
+            if (isStarted) {
+                camera.position.x += (targetX - camera.position.x) * 0.05;
+                camera.position.y += (-targetY - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+            } else {
+                // Idle gentle floating star rotation
+                if (starMesh) starMesh.rotation.y += 0.01;
+                if (starParticles) starParticles.rotation.y -= 0.005;
+            }
+
+            // Update Starfield twinkle/drift
+            if (starField) {
+                starField.rotation.y += 0.0005;
+            }
+
+            // Update 3D Positions of Memory Video Nodes & Project to 2D Screen
+            if (isStarted && galaxyGroup) {
+                galaxyGroup.rotation.y += 0.001;
+
+                memoryNodes.forEach(node => {
+                    // Update angle along orbit
+                    node.baseAngle += node.speed;
+                    const x = Math.cos(node.baseAngle) * node.radius;
+                    const z = Math.sin(node.baseAngle) * node.radius;
+                    node.position.x = x;
+                    node.position.z = z;
+
+                    // Project 3D vector to 2D Screen coordinates
+                    const vector = node.position.clone();
+                    vector.applyMatrix4(galaxyGroup.matrixWorld);
+                    vector.project(camera);
+
+                    const xScreen = (vector.x * .5 + .5) * window.innerWidth;
+                    const yScreen = (-(vector.y * .5) + .5) * window.innerHeight;
+
+                    // Hide if behind camera or out of bounds
+                    if (vector.z < 1) {
+                        node.element.style.transform = `translate(-50%, -50%) translate(${xScreen}px, ${yScreen}px)`;
+                        
+                        // Scale and opacity depth illusion
+                        const depthScale = Math.max(0.4, (1000 / (1000 + vector.z)));
+                        node.element.style.opacity = Math.max(0.15, depthScale);
+                        node.element.style.zIndex = Math.floor(depthScale * 100);
+                    } else {
+                        node.element.style.opacity = '0';
+                    }
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
         }
 
         .galaxy-space.active {
